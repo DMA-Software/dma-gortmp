@@ -93,7 +93,12 @@ func runClient(ctx context.Context, client *rtmp.Client, config *Config) error {
 	if err := client.Connect(ctx, config.ServerURL); err != nil {
 		return fmt.Errorf("failed to connect: %w", err)
 	}
-	defer client.Close()
+	defer func(client *rtmp.Client) {
+		err := client.Close()
+		if err != nil {
+			log.Printf("Failed to close client: %v", err)
+		}
+	}(client)
 
 	log.Printf("Connected successfully. Current state: %s", client.State().String())
 
