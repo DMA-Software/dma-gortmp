@@ -3,6 +3,7 @@ package rtmp
 import (
 	"context"
 	"fmt"
+	"log"
 	"net"
 	"sync"
 	"time"
@@ -207,13 +208,21 @@ func (s *Server) Stop() error {
 	s.cancel()
 
 	if s.listener != nil {
-		s.listener.Close()
+		err := s.listener.Close()
+		if err != nil {
+			log.Printf("failed to close listener: %s", err)
+			return err
+		}
 	}
 
 	// Close all client connections
 	s.clientsMux.Lock()
 	for _, client := range s.clients {
-		client.Close()
+		err := client.Close()
+		if err != nil {
+			log.Printf("failed to close client connection: %s", err)
+			return err
+		}
 	}
 	s.clientsMux.Unlock()
 
@@ -262,11 +271,15 @@ func (s *Server) acceptLoop() {
 
 		// Check connection limit
 		if s.config.MaxConnections > 0 && s.GetConnectionCount() >= s.config.MaxConnections {
-			conn.Close()
+			err := conn.Close()
+			if err != nil {
+				log.Printf("failed to close connection: %s", err)
+				return
+			}
 			continue
 		}
 
-		// Handle new connection
+		// Handle a new connection
 		go s.handleConnection(conn)
 	}
 }
@@ -287,17 +300,27 @@ func (s *Server) handleConnection(conn net.Conn) {
 		streams:      make(map[string]*Stream),
 	}
 
-	// Add to clients map
+	// Add to clients' map
 	s.clientsMux.Lock()
 	s.clients[connID] = serverConn
 	s.clientsMux.Unlock()
 
 	// Set connection timeouts
 	if s.config.ReadTimeout > 0 {
-		conn.SetReadDeadline(time.Now().Add(s.config.ReadTimeout))
+		err := conn.SetReadDeadline(time.Now().Add(s.config.ReadTimeout))
+		if err != nil {
+			_ = conn.Close()
+			log.Printf("failed to set read timeout: %s", err)
+			return
+		}
 	}
 	if s.config.WriteTimeout > 0 {
-		conn.SetWriteDeadline(time.Now().Add(s.config.WriteTimeout))
+		err := conn.SetWriteDeadline(time.Now().Add(s.config.WriteTimeout))
+		if err != nil {
+			_ = conn.Close()
+			log.Printf("failed to set write timeout: %s", err)
+			return
+		}
 	}
 
 	// Initialize handshaker and chunker
@@ -306,14 +329,28 @@ func (s *Server) handleConnection(conn net.Conn) {
 
 	// Set chunk size
 	if s.config.ChunkSize > 0 {
-		serverConn.chunker.SetReadChunkSize(s.config.ChunkSize)
-		serverConn.chunker.SetWriteChunkSize(s.config.ChunkSize)
+		err := serverConn.chunker.SetReadChunkSize(s.config.ChunkSize)
+		if err != nil {
+			_ = serverConn.Close()
+			log.Printf("failed to set chunk size: %s", err)
+			return
+		}
+		err = serverConn.chunker.SetWriteChunkSize(s.config.ChunkSize)
+		if err != nil {
+			_ = serverConn.Close()
+			log.Printf("failed to set chunk size: %s", err)
+			return
+		}
 	}
 
 	// Call OnConnect callback
 	if s.config.OnConnect != nil {
 		if err := s.config.OnConnect(serverConn); err != nil {
-			serverConn.Close()
+			err := serverConn.Close()
+			if err != nil {
+				log.Printf("failed to close connection: %s", err)
+				return
+			}
 			return
 		}
 	}
@@ -395,7 +432,7 @@ func (sc *ServerConnection) Close() error {
 
 	sc.state = ConnectionStateClosing
 
-	// Remove from server's clients map
+	// Remove from the server's clients' map
 	sc.server.clientsMux.Lock()
 	delete(sc.server.clients, sc.id)
 	sc.server.clientsMux.Unlock()
@@ -414,7 +451,13 @@ func (sc *ServerConnection) Close() error {
 
 // start begins processing messages for this connection.
 func (sc *ServerConnection) start() {
-	defer sc.Close()
+	defer func(sc *ServerConnection) {
+		err := sc.Close()
+		if err != nil {
+			log.Printf("failed to close connection: %s", err)
+			return
+		}
+	}(sc)
 
 	// Perform handshake
 	sc.state = ConnectionStateHandshaking
