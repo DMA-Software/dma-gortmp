@@ -4,7 +4,7 @@ import (
 	"time"
 )
 
-// MessageType represents the type of an RTMP message.
+// MessageType represents the type of RTMP message.
 type MessageType uint8
 
 const (
@@ -35,19 +35,19 @@ const (
 	// MessageTypeDataMessageAMF3 sends data in AMF3 format.
 	MessageTypeDataMessageAMF3 MessageType = 15
 
-	// MessageTypeSharedObjectAMF3 sends shared object in AMF3 format.
+	// MessageTypeSharedObjectAMF3 sends a shared object in AMF3 format.
 	MessageTypeSharedObjectAMF3 MessageType = 16
 
-	// MessageTypeCommandMessageAMF3 sends command in AMF3 format.
+	// MessageTypeCommandMessageAMF3 sends a command in AMF3 format.
 	MessageTypeCommandMessageAMF3 MessageType = 17
 
 	// MessageTypeDataMessageAMF0 sends data in AMF0 format.
 	MessageTypeDataMessageAMF0 MessageType = 18
 
-	// MessageTypeSharedObjectAMF0 sends shared object in AMF0 format.
+	// MessageTypeSharedObjectAMF0 sends a shared object in AMF0 format.
 	MessageTypeSharedObjectAMF0 MessageType = 19
 
-	// MessageTypeCommandMessageAMF0 sends command in AMF0 format.
+	// MessageTypeCommandMessageAMF0 sends a command in AMF0 format.
 	MessageTypeCommandMessageAMF0 MessageType = 20
 
 	// MessageTypeAggregateMessage sends aggregate message.

@@ -20,7 +20,7 @@ type Client struct {
 
 // ClientConfig holds configuration options for the RTMP client.
 type ClientConfig struct {
-	// ConnectTimeout specifies the maximum time to wait for connection establishment.
+	// ConnectTimeout specifies the maximum time to wait for a connection establishment.
 	ConnectTimeout time.Duration
 
 	// ReadTimeout specifies the timeout for read operations.
@@ -152,7 +152,7 @@ func (c *Client) WriteMessage(msg *Message) error {
 
 // ReadMessage reads an RTMP message from the server.
 func (c *Client) ReadMessage() (*Message, error) {
-	// Implementation will be in internal package
+	// Implementation will be in an internal package
 	return nil, nil
 }
 

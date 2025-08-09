@@ -82,7 +82,7 @@ func (sm *StreamManager) RemoveStream(name string) {
 
 	if stream, exists := sm.streams[name]; exists {
 		stream.Active = false
-		// Notify all subscribers that stream ended
+		// Notify all subscribers that the stream ended
 		for _, subscriber := range stream.Subscribers {
 			log.Printf("Notifying subscriber %s that stream %s ended", subscriber.ID(), name)
 		}
@@ -125,7 +125,7 @@ func (sm *StreamManager) RemoveSubscriber(streamName string, subscriber *rtmp.Se
 		return
 	}
 
-	// Remove subscriber from list
+	// Remove subscriber from a list
 	for i, sub := range stream.Subscribers {
 		if sub.ID() == subscriber.ID() {
 			stream.Subscribers = append(stream.Subscribers[:i], stream.Subscribers[i+1:]...)
@@ -282,7 +282,7 @@ func onPublish(conn *rtmp.ServerConnection, streamName string, streamType rtmp.S
 	log.Printf("Publish request: %s wants to publish stream '%s' (type: %s)",
 		conn.ID(), streamName, streamType)
 
-	// Check if stream already exists
+	// Check if a stream already exists
 	if stream, exists := streamManager.GetStream(streamName); exists {
 		if stream.Active {
 			log.Printf("Stream '%s' is already being published by %s",
@@ -301,7 +301,7 @@ func onPublish(conn *rtmp.ServerConnection, streamName string, streamType rtmp.S
 func onPlay(conn *rtmp.ServerConnection, streamName string) error {
 	log.Printf("Play request: %s wants to play stream '%s'", conn.ID(), streamName)
 
-	// Check if stream exists
+	// Check if a stream exists
 	stream, exists := streamManager.GetStream(streamName)
 	if !exists || !stream.Active {
 		log.Printf("Stream '%s' not found or inactive", streamName)
@@ -341,7 +341,7 @@ func onMessage(conn *rtmp.ServerConnection, msg *rtmp.Message) error {
 		// Handle metadata
 		return handleMetadata(conn, msg)
 	default:
-		// For other message types, just acknowledge receipt
+		// For other message types, just acknowledge the receipt
 		return nil
 	}
 }
@@ -366,7 +366,7 @@ func forwardToSubscribers(publisher *rtmp.ServerConnection, msg *rtmp.Message) e
 		return nil
 	}
 
-	// Forward message to all subscribers
+	// Forward a message to all subscribers
 	for _, subscriber := range publisherStream.Subscribers {
 		if subscriber.ID() != publisher.ID() {
 			if err := subscriber.WriteMessage(msg); err != nil {

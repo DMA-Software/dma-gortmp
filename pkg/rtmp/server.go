@@ -264,7 +264,7 @@ func (s *Server) acceptLoop() {
 			case <-s.ctx.Done():
 				return
 			default:
-				// Log error and continue
+				// Log the error and continue
 				continue
 			}
 		}
@@ -536,7 +536,7 @@ func (sc *ServerConnection) processMessage(msg *Message) error {
 
 	case MessageTypeCommandMessageAMF0:
 		// Handle AMF0 command messages
-		// Implementation would parse AMF0 and handle commands like connect, publish, play
+		// Implementation would parse AMF0 and handle commands like "connect", "publish", "play"
 
 	case MessageTypeCommandMessageAMF3:
 		// Handle AMF3 command messages

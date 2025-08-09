@@ -298,7 +298,7 @@ func (e *AMF3Encoder) encodeDate(value time.Time) error {
 	if err := e.writeByte(AMF3TypeDate); err != nil {
 		return err
 	}
-	// Check if this date is already in reference table
+	// Check if this date is already in the reference table
 	for i, obj := range e.refs.objectTable {
 		if dateObj, ok := obj.(AMF3Date); ok && dateObj.Time.Equal(value) {
 			// Write reference (index << 1)
@@ -306,7 +306,7 @@ func (e *AMF3Encoder) encodeDate(value time.Time) error {
 		}
 	}
 
-	// Add to reference table and write as new object (1)
+	// Add to the reference table and write as a new object (1)
 	e.refs.objectTable = append(e.refs.objectTable, AMF3Date{Time: value, Ref: len(e.refs.objectTable)})
 	if err := e.writeU29(1); err != nil {
 		return err
@@ -332,8 +332,8 @@ func (e *AMF3Encoder) encodeArray(dense []interface{}, associative map[string]in
 		return err
 	}
 
-	// For now, encode as new array (not implementing reference check for simplicity)
-	// Real implementation would check reference table here
+	// For now, encode as a new array (not implementing reference check for simplicity)
+	// Real implementation would check the reference table here
 	if err := e.writeU29(uint32(len(dense)<<1) | 1); err != nil {
 		return err
 	}
@@ -349,7 +349,7 @@ func (e *AMF3Encoder) encodeArray(dense []interface{}, associative map[string]in
 			}
 		}
 	}
-	// Write empty string to terminate associative part
+	// Write empty string to terminate the associative part
 	if err := e.writeStringWithReference(""); err != nil {
 		return err
 	}
@@ -397,7 +397,7 @@ func (e *AMF3Encoder) encodeObject(value map[string]interface{}) error {
 		return err
 	}
 
-	// Write empty class name
+	// Write an empty class name
 	if err := e.writeStringWithReference(""); err != nil {
 		return err
 	}
@@ -422,7 +422,7 @@ func (e *AMF3Encoder) encodeObjectValue(value AMF3Object) error {
 		return err
 	}
 
-	// For simplicity, treat as anonymous dynamic object
+	// For simplicity, treat as an anonymous dynamic object
 	// Real implementation would handle traits properly
 	if err := e.writeU29(0x0B); err != nil {
 		return err
@@ -499,10 +499,10 @@ func (e *AMF3Encoder) writeU29(value uint32) error {
 func (e *AMF3Encoder) writeStringWithReference(s string) error {
 	// Empty string is never referenced
 	if s == "" {
-		return e.writeU29(1) // length 0 with reference bit set
+		return e.writeU29(1) // length 0 with a reference bit set
 	}
 
-	// Check if string is already in reference table
+	// Check if string is already in the reference table
 	for i, ref := range e.refs.stringTable {
 		if ref == s {
 			// Write reference: index << 1 (reference bit = 0)
@@ -510,10 +510,10 @@ func (e *AMF3Encoder) writeStringWithReference(s string) error {
 		}
 	}
 
-	// Add to reference table
+	// Add to the reference table
 	e.refs.stringTable = append(e.refs.stringTable, s)
 
-	// Write string length with reference bit set: (length << 1) | 1
+	// Write string length with a reference bit set: (length << 1) | 1
 	if err := e.writeU29(uint32(len(s)<<1) | 1); err != nil {
 		return err
 	}
@@ -662,7 +662,7 @@ func (d *AMF3Decoder) readU29() (uint32, error) {
 		bytesRead++
 
 		if i < 3 {
-			// For first 3 bytes, MSB indicates continuation
+			// For the first 3 bytes, MSB indicates continuation
 			result = (result << 7) | uint32(b&0x7F)
 
 			if (b & 0x80) == 0 {
@@ -756,7 +756,7 @@ func (d *AMF3Decoder) decodeDateValue() (AMF3Date, error) {
 	timestampFloat := math.Float64frombits(timestamp)
 	timeValue := time.Unix(0, int64(timestampFloat*1e6))
 
-	// Add to reference table
+	// Add to the reference table
 	dateValue := AMF3Date{Time: timeValue, Ref: len(d.refs.objectTable)}
 	d.refs.objectTable = append(d.refs.objectTable, dateValue)
 
@@ -770,7 +770,7 @@ func (d *AMF3Decoder) decodeArray() (interface{}, error) {
 		return nil, err
 	}
 
-	// Convert to Go types - return as slice for dense arrays, map for associative
+	// Convert to Go types - return as a slice for dense arrays, map for associative
 	if len(arrayValue.Associative) == 0 {
 		// Pure dense array
 		result := make([]interface{}, len(arrayValue.Dense))
@@ -788,7 +788,7 @@ func (d *AMF3Decoder) decodeArray() (interface{}, error) {
 		result[k] = v
 	}
 
-	// Add dense array as numbered keys
+	// Add a dense array as numbered keys
 	for i, v := range arrayValue.Dense {
 		result[fmt.Sprintf("%d", i)] = v
 	}
@@ -805,7 +805,7 @@ func (d *AMF3Decoder) decodeArrayValue() (AMF3Array, error) {
 
 	// Check if this is a reference (LSB = 0)
 	if (handle & 1) == 0 {
-		// Reference to existing array
+		// Reference to an existing array
 		index := handle >> 1
 		if int(index) >= len(d.refs.objectTable) {
 			return AMF3Array{}, fmt.Errorf("invalid array reference: %d", index)
@@ -825,7 +825,7 @@ func (d *AMF3Decoder) decodeArrayValue() (AMF3Array, error) {
 		Ref:         len(d.refs.objectTable),
 	}
 
-	// Add to reference table first (for self-references)
+	// Add to the reference table first (for self-references)
 	d.refs.objectTable = append(d.refs.objectTable, arrayValue)
 
 	// Read associative part (key-value pairs until empty string)
@@ -881,7 +881,7 @@ func (d *AMF3Decoder) decodeObjectValue() (AMF3Object, error) {
 
 	// Check if this is a reference (LSB = 0)
 	if (handle & 1) == 0 {
-		// Reference to existing object
+		// Reference to an existing object
 		index := handle >> 1
 		if int(index) >= len(d.refs.objectTable) {
 			return AMF3Object{}, fmt.Errorf("invalid object reference: %d", index)
@@ -892,10 +892,10 @@ func (d *AMF3Decoder) decodeObjectValue() (AMF3Object, error) {
 		return AMF3Object{}, fmt.Errorf("referenced object is not an object")
 	}
 
-	// Check if this is a traits reference ((handle >> 1) & 1 == 0)
+	// Check if this is a trait reference ((handle >> 1) & 1 == 0)
 	if ((handle >> 1) & 1) == 0 {
 		// Traits reference - for simplicity, we'll handle this as a new object
-		// Real implementation would look up traits in reference table
+		// Real implementation would look up traits in the reference table
 	}
 
 	objectValue := AMF3Object{
@@ -903,10 +903,10 @@ func (d *AMF3Decoder) decodeObjectValue() (AMF3Object, error) {
 		Ref:        len(d.refs.objectTable),
 	}
 
-	// Add to reference table first (for self-references)
+	// Add to the reference table first (for self-references)
 	d.refs.objectTable = append(d.refs.objectTable, objectValue)
 
-	// For simplicity, assume anonymous dynamic object
+	// For simplicity, assume an anonymous dynamic object
 	// Read class name (should be empty for anonymous)
 	className, err := d.readStringWithReference()
 	if err != nil {
@@ -949,7 +949,7 @@ func (d *AMF3Decoder) readStringWithReference() (string, error) {
 
 	// Check if this is a reference (LSB = 0)
 	if (handle & 1) == 0 {
-		// Reference to existing string
+		// Reference to an existing string
 		index := handle >> 1
 		if int(index) >= len(d.refs.stringTable) {
 			return "", fmt.Errorf("invalid string reference: %d", index)
@@ -960,7 +960,7 @@ func (d *AMF3Decoder) readStringWithReference() (string, error) {
 	// New string - read length
 	length := handle >> 1
 	if length == 0 {
-		return "", nil // Empty string is never added to reference table
+		return "", nil // Empty string is never added to the reference table
 	}
 
 	// Read string content
@@ -971,7 +971,7 @@ func (d *AMF3Decoder) readStringWithReference() (string, error) {
 
 	str := string(buf)
 
-	// Add to reference table
+	// Add to the reference table
 	d.refs.stringTable = append(d.refs.stringTable, str)
 
 	return str, nil
