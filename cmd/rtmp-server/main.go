@@ -182,7 +182,10 @@ func main() {
 		<-sigCh
 		log.Println("Received shutdown signal, stopping server...")
 		cancel()
-		server.Stop()
+		err := server.Stop()
+		if err != nil {
+			return
+		}
 	}()
 
 	// Start the server
