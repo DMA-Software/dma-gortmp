@@ -6,6 +6,7 @@ import (
 	"log"
 	"net"
 	"sync"
+	"sync/atomic"
 	"time"
 )
 
@@ -75,13 +76,15 @@ type ServerConnection struct {
 	chunker    *ChunkStreamer
 	streams    map[string]*Stream
 	streamsMux sync.RWMutex
+	writeLock  sync.Mutex
 
 	// Connection metadata
-	clientAddr    net.Addr
-	connectTime   time.Time
-	lastActivity  time.Time
-	bytesReceived uint64
-	bytesSent     uint64
+	clientAddr   net.Addr
+	connectTime  time.Time
+	lastActivity time.Time
+
+	bytesReceived atomic.Uint64
+	bytesSent     atomic.Uint64
 }
 
 // ConnectionState represents the state of a server connection.
@@ -150,23 +153,53 @@ type Stream struct {
 
 // NewServer creates a new RTMP server with the provided configuration.
 func NewServer(config *ServerConfig) *Server {
-	if config == nil {
-		config = &ServerConfig{
-			Addr:               ":1935",
-			ReadTimeout:        30 * time.Second,
-			WriteTimeout:       30 * time.Second,
-			HandshakeTimeout:   10 * time.Second,
-			ChunkSize:          128,
-			WindowAckSize:      2500000,
-			BandwidthLimitType: 2,
-			MaxConnections:     1000,
+	cfg := ServerConfig{
+		Addr:               ":1935",
+		ReadTimeout:        30 * time.Second,
+		WriteTimeout:       30 * time.Second,
+		HandshakeTimeout:   10 * time.Second,
+		ChunkSize:          128,
+		WindowAckSize:      2500000,
+		BandwidthLimitType: 2,
+		MaxConnections:     1000,
+	}
+	if config != nil {
+		// Shallow copy; zero-value fields keep defaults above
+		if config.Addr != "" {
+			cfg.Addr = config.Addr
 		}
+		if config.ReadTimeout != 0 {
+			cfg.ReadTimeout = config.ReadTimeout
+		}
+		if config.WriteTimeout != 0 {
+			cfg.WriteTimeout = config.WriteTimeout
+		}
+		if config.HandshakeTimeout != 0 {
+			cfg.HandshakeTimeout = config.HandshakeTimeout
+		}
+		if config.ChunkSize != 0 {
+			cfg.ChunkSize = config.ChunkSize
+		}
+		if config.WindowAckSize != 0 {
+			cfg.WindowAckSize = config.WindowAckSize
+		}
+		if config.BandwidthLimitType != 0 {
+			cfg.BandwidthLimitType = config.BandwidthLimitType
+		}
+		if config.MaxConnections != 0 {
+			cfg.MaxConnections = config.MaxConnections
+		}
+		cfg.OnConnect = config.OnConnect
+		cfg.OnDisconnect = config.OnDisconnect
+		cfg.OnPublish = config.OnPublish
+		cfg.OnPlay = config.OnPlay
+		cfg.OnMessage = config.OnMessage
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
 
 	return &Server{
-		config:  config,
+		config:  &cfg,
 		clients: make(map[string]*ServerConnection),
 		ctx:     ctx,
 		cancel:  cancel,
@@ -218,12 +251,13 @@ func (s *Server) Stop() error {
 	// Close all client connections
 	s.clientsMux.Lock()
 	for _, client := range s.clients {
-		err := client.Close()
+		err := client.conn.Close()
 		if err != nil {
 			log.Printf("failed to close client connection: %s", err)
 			return err
 		}
 	}
+	s.clients = make(map[string]*ServerConnection)
 	s.clientsMux.Unlock()
 
 	return nil
@@ -388,26 +422,41 @@ func (sc *ServerConnection) LastActivity() time.Time {
 
 // BytesReceived returns the total number of bytes received.
 func (sc *ServerConnection) BytesReceived() uint64 {
-	return sc.bytesReceived
+	sc.writeLock.Lock()
+	defer sc.writeLock.Unlock()
+	return sc.bytesReceived.Load()
 }
 
 // BytesSent returns the total number of bytes sent.
 func (sc *ServerConnection) BytesSent() uint64 {
-	return sc.bytesSent
+	sc.writeLock.Lock()
+	defer sc.writeLock.Unlock()
+	return sc.bytesSent.Load()
 }
 
 // WriteMessage sends an RTMP message to the client.
 func (sc *ServerConnection) WriteMessage(msg *Message) error {
+	if msg == nil {
+		return fmt.Errorf("message is nil")
+	}
+
+	if sc.chunker == nil {
+		return fmt.Errorf("chunker not initialized")
+	}
+	sc.writeLock.Lock()
+	defer sc.writeLock.Unlock()
+
 	if sc.state == ConnectionStateClosed || sc.state == ConnectionStateClosing {
 		return fmt.Errorf("connection is closed")
 	}
 
-	err := sc.chunker.WriteMessage(msg)
-	if err == nil {
-		sc.bytesSent += uint64(msg.Length)
-		sc.lastActivity = time.Now()
+	if err := sc.chunker.WriteMessage(msg); err != nil {
+		sc.state = ConnectionStateError
+		return err
 	}
-	return err
+	sc.bytesSent.Add(uint64(msg.Length))
+	sc.lastActivity = time.Now()
+	return nil
 }
 
 // ReadMessage reads an RTMP message from the client.
@@ -418,7 +467,9 @@ func (sc *ServerConnection) ReadMessage() (*Message, error) {
 
 	msg, err := sc.chunker.ReadMessage()
 	if err == nil && msg != nil {
-		sc.bytesReceived += uint64(msg.Length)
+		sc.writeLock.Lock()
+		defer sc.writeLock.Unlock()
+		sc.bytesReceived.Add(uint64(msg.Length))
 		sc.lastActivity = time.Now()
 	}
 	return msg, err
