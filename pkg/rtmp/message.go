@@ -118,12 +118,17 @@ type Message struct {
 
 // NewMessage creates a new RTMP message.
 func NewMessage(chunkStreamID, messageStreamID uint32, msgType MessageType, data []byte) *Message {
+	var payload []byte
+	if len(data) > 0 {
+		payload = make([]byte, len(data))
+		copy(payload, data)
+	}
 	return &Message{
 		ChunkStreamID:     chunkStreamID,
 		MessageStreamID:   messageStreamID,
 		Type:              msgType,
-		Data:              data,
-		Length:            uint32(len(data)),
+		Data:              payload,
+		Length:            uint32(len(payload)),
 		AbsoluteTimestamp: time.Now(),
 	}
 }
