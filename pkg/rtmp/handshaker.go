@@ -19,15 +19,16 @@ const HandshakePacketSize = 1536
 // C1/S1: Time + Zero + Random (1536 bytes)
 // C2/S2: Time + Time2 + Random echo (1536 bytes)
 type Handshaker struct {
-	conn         net.Conn
-	state        HandshakeState
-	isClient     bool
-	clientTime   uint32
-	serverTime   uint32
-	clientRandom [1528]byte
-	serverRandom [1528]byte
-	clientTime2  uint32
-	serverTime2  uint32
+	conn             net.Conn
+	state            HandshakeState
+	isClient         bool
+	clientTime       uint32
+	serverTime       uint32
+	clientRandom     [1528]byte
+	serverRandom     [1528]byte
+	clientTime2      uint32
+	serverTime2      uint32
+	handshakeTimeout time.Duration
 }
 
 // NewHandshaker creates a new handshaker for the given connection.
@@ -39,6 +40,11 @@ func NewHandshaker(conn net.Conn, isClient bool) *Handshaker {
 	}
 }
 
+func (h *Handshaker) WithTimeout(duration time.Duration) *Handshaker {
+	h.handshakeTimeout = duration
+	return h
+}
+
 // State returns the current handshake state.
 func (h *Handshaker) State() HandshakeState {
 	return h.state
@@ -46,6 +52,11 @@ func (h *Handshaker) State() HandshakeState {
 
 // DoHandshake performs the complete RTMP handshake.
 func (h *Handshaker) DoHandshake() error {
+	if h.handshakeTimeout > 0 {
+		_ = h.conn.SetReadDeadline(time.Now().Add(h.handshakeTimeout))
+		defer h.conn.SetReadDeadline(time.Time{})
+	}
+
 	if h.isClient {
 		return h.doClientHandshake()
 	}
@@ -78,13 +89,13 @@ func (h *Handshaker) doClientHandshake() error {
 		h.state = HandshakeStateError
 		return fmt.Errorf("failed to receive S1: %w", err)
 	}
-	h.state = HandshakeStateAckSent
 
 	// Send C2
 	if err := h.sendC2(); err != nil {
 		h.state = HandshakeStateError
 		return fmt.Errorf("failed to send C2: %w", err)
 	}
+	h.state = HandshakeStateAckSent
 
 	// Receive S2
 	if err := h.receiveS2(); err != nil {
@@ -122,19 +133,19 @@ func (h *Handshaker) doServerHandshake() error {
 		h.state = HandshakeStateError
 		return fmt.Errorf("failed to send S1: %w", err)
 	}
-	h.state = HandshakeStateAckSent
 
-	// Receive C2
+	// Receive C2 (client asks)
 	if err := h.receiveC2(); err != nil {
 		h.state = HandshakeStateError
 		return fmt.Errorf("failed to receive C2: %w", err)
 	}
 
-	// Send S2
+	// Send S2 (ask)
 	if err := h.sendS2(); err != nil {
 		h.state = HandshakeStateError
 		return fmt.Errorf("failed to send S2: %w", err)
 	}
+	h.state = HandshakeStateAckSent
 
 	h.state = HandshakeStateHandshakeDone
 	return nil
@@ -142,7 +153,13 @@ func (h *Handshaker) doServerHandshake() error {
 
 // sendC0 sends the client version byte.
 func (h *Handshaker) sendC0() error {
-	_, err := h.conn.Write([]byte{HandshakeVersion})
+	n, err := h.conn.Write([]byte{HandshakeVersion})
+	if err != nil {
+		return err
+	}
+	if n != 1 {
+		return fmt.Errorf("short write sending C0: %d", n)
+	}
 	return err
 }
 
