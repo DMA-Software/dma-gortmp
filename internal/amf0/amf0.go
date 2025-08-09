@@ -426,7 +426,7 @@ func (e *AMF0Encoder) writeByte(b byte) error {
 	return err
 }
 
-// AMF0Decoder decodes AMF0 format to Go values
+// AMF0Decoder decodes an AMF0 format to Go values
 //
 //goland:noinspection ALL
 type AMF0Decoder struct {
