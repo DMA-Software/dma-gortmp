@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"net"
+	"sync"
 )
 
 // DefaultChunkSize represents the default chunk size for RTMP messages.
@@ -11,6 +12,14 @@ const DefaultChunkSize = 128
 
 // MaxChunkSize represents the maximum allowed chunk size.
 const MaxChunkSize = 65536
+
+var chunkBufPool = sync.Pool{
+	New: func() any {
+		// Default to max read chunk size to avoid frequent re-alloc.
+		b := make([]byte, MaxChunkSize)
+		return &b
+	},
+}
 
 // ChunkStreamer handles the RTMP chunk stream protocol.
 // It manages reading and writing of chunked RTMP messages over a network connection.
@@ -90,33 +99,38 @@ func (cs *ChunkStreamer) ReadMessage() (*Message, error) {
 			return nil, fmt.Errorf("failed to read chunk: %w", err)
 		}
 
+		overhead := cs.getChunkHeaderSize(chunk.Header.Format)
+		cs.updateBytesReceived(uint32(len(chunk.Data)) + overhead)
+
 		msg, complete, err := cs.assembleMessage(chunk)
 		if err != nil {
 			return nil, fmt.Errorf("failed to assemble message: %w", err)
 		}
 
 		if complete {
-			cs.updateBytesReceived(uint32(len(chunk.Data)) + cs.getChunkHeaderSize(chunk.Header.Format))
 			return msg, nil
 		}
-
-		cs.updateBytesReceived(uint32(len(chunk.Data)) + cs.getChunkHeaderSize(chunk.Header.Format))
 	}
 }
 
 // WriteMessage writes a complete RTMP message to the connection.
 func (cs *ChunkStreamer) WriteMessage(msg *Message) error {
-	if msg.Length == 0 {
-		msg.Length = uint32(len(msg.Data))
+	msgLength := msg.Length
+	if msgLength == 0 {
+		msgLength = uint32(len(msg.Data))
 	}
 
 	chunkStreamID := msg.ChunkStreamID
 	if chunkStreamID == 0 {
 		chunkStreamID = cs.getNextChunkStreamID()
-		msg.ChunkStreamID = chunkStreamID
+		// Do not mutate msg; keep local
 	}
 
-	chunks, err := cs.createChunks(msg)
+	localMsg := *msg
+	localMsg.Length = msgLength
+	localMsg.ChunkStreamID = chunkStreamID
+
+	chunks, err := cs.createChunks(&localMsg)
 	if err != nil {
 		return fmt.Errorf("failed to create chunks: %w", err)
 	}
@@ -160,16 +174,28 @@ func (cs *ChunkStreamer) readChunk() (*Chunk, error) {
 
 	// Calculate data size to read
 	dataSize := cs.calculateChunkDataSize(header, state)
+	if dataSize == 0 {
+		return &Chunk{Header: header, Data: nil}, nil
+	}
+	if dataSize > MaxChunkSize {
+		return nil, fmt.Errorf("chunk data size too large: %d (max: %d)", dataSize, MaxChunkSize)
+	}
 
-	// Read chunk data
-	data := make([]byte, dataSize)
+	bufPtr := chunkBufPool.Get().(*[]byte)
+	defer chunkBufPool.Put(bufPtr)
+	buf := *bufPtr
+	data := buf[:dataSize]
 	if _, err := io.ReadFull(cs.conn, data); err != nil {
 		return nil, fmt.Errorf("failed to read chunk data: %w", err)
 	}
 
+	// Copy out to a right-sized slice to avoid retaining large pooled buffers downstream
+	out := make([]byte, dataSize)
+	copy(out, data)
+
 	return &Chunk{
 		Header: header,
-		Data:   data,
+		Data:   out,
 	}, nil
 }
 
