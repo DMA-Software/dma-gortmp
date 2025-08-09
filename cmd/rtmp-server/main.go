@@ -1,6 +1,10 @@
 // Package main provides a simple RTMP server example.
 // This demonstrates how to use the dma-gortmp library to create an RTMP server
 // that can accept client connections, handle publish/play requests, and manage streams.
+//
+// The server automatically supports both AMF0 and AMF3 encoding. It detects the client's
+// preferred encoding format during the connection handshake and adapts accordingly.
+// AMF3 clients will automatically use the more efficient AMF3 format for all communications.
 package main
 
 import (
