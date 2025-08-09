@@ -18,7 +18,7 @@ The library follows a modular architecture with a clear separation of concerns:
 
 ```
 rtmp-go/
-├── cmd/                    # Example applications
+├── cmd/                   # Example applications
 │   ├── rtmp-client/       # Example RTMP client
 │   └── rtmp-server/       # Example RTMP server
 ├── pkg/rtmp/              # Public API
