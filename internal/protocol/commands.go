@@ -7,7 +7,7 @@ import (
 	"bytes"
 	"fmt"
 
-	"github.com/DMA-Software/dma-gortmp/internal/amf"
+	"github.com/DMA-Software/dma-gortmp/internal/amf0"
 )
 
 // CommandName represents the name of an RTMP command.
@@ -141,7 +141,7 @@ func (p *CommandParser) ParseCommand(data []byte) (*Command, error) {
 		return nil, fmt.Errorf("empty command data")
 	}
 
-	decoder := amf.NewAMF0Decoder(bytes.NewReader(data))
+	decoder := amf0.NewAMF0Decoder(bytes.NewReader(data))
 
 	// First element: command name (string)
 	nameValue, err := decoder.Decode()
@@ -367,7 +367,7 @@ func NewCommandBuilder() *CommandBuilder {
 // BuildCommand builds a command message as AMF0 encoded data.
 func (b *CommandBuilder) BuildCommand(name CommandName, transactionID float64, commandObj interface{}, args ...interface{}) ([]byte, error) {
 	var buf bytes.Buffer
-	encoder := amf.NewAMF0Encoder(&buf)
+	encoder := amf0.NewAMF0Encoder(&buf)
 
 	// Encode command name
 	if err := encoder.Encode(string(name)); err != nil {
