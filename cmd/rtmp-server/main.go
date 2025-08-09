@@ -63,6 +63,11 @@ func (sm *StreamManager) AddStream(name string, publisher *rtmp.ServerConnection
 	sm.mutex.Lock()
 	defer sm.mutex.Unlock()
 
+	if existing, ok := sm.streams[name]; ok && existing.Active {
+		log.Printf("Stream already exists and active: %s (publisher: %s)", name, existing.Publisher.ID())
+		// Consider returning here or marking old inactive before replacing.
+	}
+
 	sm.streams[name] = &StreamInfo{
 		Name:        name,
 		Publisher:   publisher,
@@ -73,6 +78,7 @@ func (sm *StreamManager) AddStream(name string, publisher *rtmp.ServerConnection
 	}
 
 	log.Printf("Stream added: %s (publisher: %s)", name, publisher.ID())
+
 }
 
 // RemoveStream removes a stream
@@ -110,9 +116,15 @@ func (sm *StreamManager) AddSubscriber(streamName string, subscriber *rtmp.Serve
 		return false
 	}
 
+	for _, sub := range stream.Subscribers {
+		if sub.ID() == subscriber.ID() {
+			return true // already subscribed
+		}
+	}
 	stream.Subscribers = append(stream.Subscribers, subscriber)
 	log.Printf("Subscriber added to stream %s: %s", streamName, subscriber.ID())
 	return true
+
 }
 
 // RemoveSubscriber removes a subscriber from a stream
@@ -124,29 +136,46 @@ func (sm *StreamManager) RemoveSubscriber(streamName string, subscriber *rtmp.Se
 	if !exists {
 		return
 	}
-
-	// Remove subscriber from a list
-	for i, sub := range stream.Subscribers {
-		if sub.ID() == subscriber.ID() {
-			stream.Subscribers = append(stream.Subscribers[:i], stream.Subscribers[i+1:]...)
+	subs := stream.Subscribers
+	for i := range subs {
+		if subs[i].ID() == subscriber.ID() {
+			last := len(subs) - 1
+			subs[i] = subs[last]
+			stream.Subscribers = subs[:last]
 			log.Printf("Subscriber removed from stream %s: %s", streamName, subscriber.ID())
-			break
+			return
 		}
 	}
+	log.Printf("Subscriber not found in stream %s: %s", streamName, subscriber.ID())
 }
 
 // ListStreams returns all active streams
-func (sm *StreamManager) ListStreams() map[string]*StreamInfo {
+func (sm *StreamManager) ListStreams() map[string]StreamInfo {
 	sm.mutex.RLock()
 	defer sm.mutex.RUnlock()
 
-	result := make(map[string]*StreamInfo)
+	result := make(map[string]StreamInfo, len(sm.streams))
 	for name, stream := range sm.streams {
-		if stream.Active {
-			result[name] = stream
+		if !stream.Active {
+			continue
+		}
+		// Shallow copy with safe fields; omit Subscribers slice to avoid accidental mutation,
+		// or include only counts.
+		copyMeta := make(map[string]interface{}, len(stream.Metadata))
+		for k, v := range stream.Metadata {
+			copyMeta[k] = v
+		}
+		result[name] = StreamInfo{
+			Name:      stream.Name,
+			Publisher: stream.Publisher,
+			StartTime: stream.StartTime,
+			Active:    true,
+			Metadata:  copyMeta,
+			// Subscribers intentionally omitted from snapshot
 		}
 	}
 	return result
+
 }
 
 // Global stream manager
@@ -355,7 +384,7 @@ func forwardToSubscribers(publisher *rtmp.ServerConnection, msg *rtmp.Message) e
 
 	for name, stream := range streams {
 		if stream.Publisher != nil && stream.Publisher.ID() == publisher.ID() {
-			publisherStream = stream
+			publisherStream = &stream
 			publisherStreamName = name
 			break
 		}
