@@ -1,7 +1,7 @@
-// Package amf implements Action Message Format (AMF) encoding and decoding.
+// Package amf0 implements Action Message Format (AMF) encoding and decoding.
 // This package provides support for both AMF0 and AMF3 formats as specified
 // in the Adobe Flash Video File Format Specification.
-package amf
+package amf0
 
 import (
 	"encoding/binary"
