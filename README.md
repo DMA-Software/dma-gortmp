@@ -333,6 +333,9 @@ for {
     case rtmp.MessageTypeCommandMessageAMF0:
         handleCommand(msg.Data)
     }
+	case rtmp.MessageTypeCommandMessageAMF3:
+        handleCommand(msg.Data)
+    }
 }
 ```
 
