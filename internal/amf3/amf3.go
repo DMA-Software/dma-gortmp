@@ -10,6 +10,9 @@ import (
 	"time"
 )
 
+const amf3MinInt = -268435456 // -2^28
+const amf3MaxInt = 268435455  //  2^28 - 1
+
 // AMF3 Data Types as defined in the AMF3 specification
 //
 //goland:noinspection ALL
@@ -171,31 +174,44 @@ func (e *AMF3Encoder) encodeValue(value interface{}) error {
 	case bool:
 		return e.encodeBoolean(v)
 	case int:
-		return e.encodeInteger(int32(v))
+		if v >= amf3MinInt && v <= amf3MaxInt {
+			return e.encodeInteger(int32(v))
+		}
+		return e.encodeDouble(float64(v))
 	case int8:
 		return e.encodeInteger(int32(v))
 	case int16:
 		return e.encodeInteger(int32(v))
 	case int32:
-		return e.encodeInteger(v)
+		if v >= amf3MinInt && v <= amf3MaxInt {
+			return e.encodeInteger(v)
+		}
+		return e.encodeDouble(float64(v))
 	case int64:
 		// AMF3 integers are 29-bit, use double for larger values
-		if v >= -268435456 && v <= 268435455 {
+		if v >= amf3MinInt && v <= amf3MaxInt {
 			return e.encodeInteger(int32(v))
 		}
 		return e.encodeDouble(float64(v))
 	case uint:
-		return e.encodeInteger(int32(v))
+		if v <= amf3MaxInt {
+			return e.encodeInteger(int32(v))
+		}
+		return e.encodeDouble(float64(v))
 	case uint8:
 		return e.encodeInteger(int32(v))
 	case uint16:
 		return e.encodeInteger(int32(v))
 	case uint32:
-		if v <= 268435455 {
+		if v <= amf3MaxInt {
 			return e.encodeInteger(int32(v))
 		}
 		return e.encodeDouble(float64(v))
 	case uint64:
+		if v <= math.MaxInt32 && v <= uint64(amf3MaxInt) {
+			return e.encodeInteger(int32(v))
+		}
+		// may lose precision, but per AMF3 spec large ints are encoded as doubles
 		return e.encodeDouble(float64(v))
 	case float32:
 		return e.encodeDouble(float64(v))
@@ -212,7 +228,7 @@ func (e *AMF3Encoder) encodeValue(value interface{}) error {
 	case AMF3Value:
 		return e.encodeAMF3Value(v)
 	default:
-		return fmt.Errorf("unsupported type for AMF3 encoding: %T", value)
+		return e.encodeObject(v)
 	}
 }
 
