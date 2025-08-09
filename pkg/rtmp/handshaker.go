@@ -234,12 +234,12 @@ func (h *Handshaker) receiveS2() error {
 	// Verify that S2 echoes our C1 data
 	expectedTime := uint32(s2[0])<<24 | uint32(s2[1])<<16 | uint32(s2[2])<<8 | uint32(s2[3])
 	if expectedTime != h.clientTime {
-		return fmt.Errorf("S2 time mismatch: expected %d, got %d", h.clientTime, expectedTime)
+		return fmt.Errorf("s2 time mismatch: expected %d, got %d", h.clientTime, expectedTime)
 	}
 
 	// Verify random data echo
 	if !compareBytes(s2[8:], h.clientRandom[:]) {
-		return fmt.Errorf("S2 random data mismatch")
+		return fmt.Errorf("s2 random data mismatch")
 	}
 
 	return nil
@@ -311,7 +311,7 @@ func (h *Handshaker) receiveC2() error {
 	// Verify that C2 echoes our S1 data
 	expectedTime := uint32(c2[0])<<24 | uint32(c2[1])<<16 | uint32(c2[2])<<8 | uint32(c2[3])
 	if expectedTime != h.serverTime {
-		return fmt.Errorf("C2 time mismatch: expected %d, got %d", h.serverTime, expectedTime)
+		return fmt.Errorf("c2 time mismatch: expected %d, got %d", h.serverTime, expectedTime)
 	}
 
 	// Extract client time2
@@ -319,7 +319,7 @@ func (h *Handshaker) receiveC2() error {
 
 	// Verify random data echo
 	if !compareBytes(c2[8:], h.serverRandom[:]) {
-		return fmt.Errorf("C2 random data mismatch")
+		return fmt.Errorf("c2 random data mismatch")
 	}
 
 	return nil
