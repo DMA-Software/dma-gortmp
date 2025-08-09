@@ -15,6 +15,8 @@ import (
 type CommandName string
 
 // Common RTMP command names
+//
+//goland:noinspection ALL
 const (
 	CommandConnect       CommandName = "connect"
 	CommandCall          CommandName = "call"
@@ -86,6 +88,8 @@ type PlayCommand struct {
 type StatusCode string
 
 // Common RTMP status codes
+//
+//goland:noinspection ALL
 const (
 	StatusNetConnectionConnectSuccess  StatusCode = "NetConnection.Connect.Success"
 	StatusNetConnectionConnectFailed   StatusCode = "NetConnection.Connect.Failed"
@@ -114,6 +118,8 @@ const (
 type StatusLevel string
 
 // Status levels
+//
+//goland:noinspection ALL
 const (
 	StatusLevelStatus  StatusLevel = "status"
 	StatusLevelError   StatusLevel = "error"
@@ -134,6 +140,8 @@ type CommandParser struct {
 }
 
 // NewCommandParser creates a new command parser with default AMF0 encoding.
+//
+//goland:noinspection ALL
 func NewCommandParser() *CommandParser {
 	return &CommandParser{encoding: 0}
 }
@@ -386,6 +394,7 @@ type CommandBuilder struct {
 	encoding uint8 // 0 for AMF0, 3 for AMF3
 }
 
+//goland:noinspection ALL
 func NewCommandBuilder() *CommandBuilder {
 	return &CommandBuilder{encoding: 0}
 }

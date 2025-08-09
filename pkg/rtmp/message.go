@@ -131,6 +131,7 @@ func NewMessage(chunkStreamID, messageStreamID uint32, msgType MessageType, data
 // StreamType represents the type of stream for publishing.
 type StreamType string
 
+//goland:noinspection ALL
 const (
 	// StreamTypeLive indicates a live stream.
 	StreamTypeLive StreamType = "live"

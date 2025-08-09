@@ -11,6 +11,8 @@ import (
 )
 
 // AMF3 Data Types as defined in the AMF3 specification
+//
+//goland:noinspection ALL
 const (
 	AMF3TypeUndefined    = 0x00
 	AMF3TypeNull         = 0x01
@@ -33,21 +35,29 @@ const (
 )
 
 // AMF3Value represents any AMF3 value
+//
+//goland:noinspection ALL
 type AMF3Value interface {
 	Type() byte
 }
 
 // AMF3Undefined represents an AMF3 Undefined value
+//
+//goland:noinspection ALL
 type AMF3Undefined struct{}
 
 func (u AMF3Undefined) Type() byte { return AMF3TypeUndefined }
 
 // AMF3Null represents an AMF3 Null value
+//
+//goland:noinspection ALL
 type AMF3Null struct{}
 
 func (n AMF3Null) Type() byte { return AMF3TypeNull }
 
 // AMF3Boolean represents an AMF3 Boolean value (true/false)
+//
+//goland:noinspection ALL
 type AMF3Boolean bool
 
 func (b AMF3Boolean) Type() byte {
@@ -58,16 +68,22 @@ func (b AMF3Boolean) Type() byte {
 }
 
 // AMF3Integer represents an AMF3 Integer (29-bit signed integer)
+//
+//goland:noinspection ALL
 type AMF3Integer int32
 
 func (i AMF3Integer) Type() byte { return AMF3TypeInteger }
 
 // AMF3Double represents an AMF3 Double (IEEE-754 double precision floating point)
+//
+//goland:noinspection ALL
 type AMF3Double float64
 
 func (d AMF3Double) Type() byte { return AMF3TypeDouble }
 
 // AMF3String represents an AMF3 String with reference support
+//
+//goland:noinspection ALL
 type AMF3String struct {
 	Value string
 	Ref   int // Reference table index, -1 if not referenced
@@ -76,6 +92,8 @@ type AMF3String struct {
 func (s AMF3String) Type() byte { return AMF3TypeString }
 
 // AMF3Date represents an AMF3 Date
+//
+//goland:noinspection ALL
 type AMF3Date struct {
 	Time time.Time
 	Ref  int // Reference table index, -1 if not referenced
@@ -84,6 +102,8 @@ type AMF3Date struct {
 func (d AMF3Date) Type() byte { return AMF3TypeDate }
 
 // AMF3Array represents an AMF3 Array with dense and associative parts
+//
+//goland:noinspection ALL
 type AMF3Array struct {
 	Dense       []AMF3Value          // Dense array elements
 	Associative map[string]AMF3Value // Associative properties
@@ -93,6 +113,8 @@ type AMF3Array struct {
 func (a AMF3Array) Type() byte { return AMF3TypeArray }
 
 // AMF3Object represents an AMF3 Object with traits and properties
+//
+//goland:noinspection ALL
 type AMF3Object struct {
 	Traits     *AMF3Traits          // Object traits definition
 	Properties map[string]AMF3Value // Object properties
@@ -102,6 +124,8 @@ type AMF3Object struct {
 func (o AMF3Object) Type() byte { return AMF3TypeObject }
 
 // AMF3Traits represents object traits (class definition) in AMF3
+//
+//goland:noinspection ALL
 type AMF3Traits struct {
 	ClassName      string   // Class name (empty string for anonymous object)
 	Dynamic        bool     // Whether object accepts dynamic properties
@@ -119,6 +143,8 @@ type referenceContext struct {
 }
 
 // AMF3Encoder provides encoding of Go values to AMF3 format
+//
+//goland:noinspection ALL
 type AMF3Encoder struct {
 	writer io.Writer
 	refs   referenceContext
@@ -498,6 +524,8 @@ func (e *AMF3Encoder) writeStringWithReference(s string) error {
 }
 
 // AMF3Decoder provides decoding of AMF3 format to Go values
+//
+//goland:noinspection ALL
 type AMF3Decoder struct {
 	reader io.Reader
 	refs   referenceContext

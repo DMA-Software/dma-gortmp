@@ -12,6 +12,8 @@ import (
 )
 
 // AMF0 Data Types as defined in the AMF0 specification
+//
+//goland:noinspection ALL
 const (
 	AMF0TypeNumber      = 0x00
 	AMF0TypeBoolean     = 0x01
@@ -34,41 +36,57 @@ const (
 )
 
 // AMF0Value represents any AMF0 value
+//
+//goland:noinspection ALL
 type AMF0Value interface {
 	Type() byte
 }
 
 // AMF0Number represents an AMF0 Number (IEEE-754 double precision floating point)
+//
+//goland:noinspection ALL
 type AMF0Number float64
 
 func (n AMF0Number) Type() byte { return AMF0TypeNumber }
 
 // AMF0Boolean represents an AMF0 Boolean
+//
+//goland:noinspection ALL
 type AMF0Boolean bool
 
 func (b AMF0Boolean) Type() byte { return AMF0TypeBoolean }
 
 // AMF0String represents an AMF0 String
+//
+//goland:noinspection ALL
 type AMF0String string
 
 func (s AMF0String) Type() byte { return AMF0TypeString }
 
 // AMF0Object represents an AMF0 Object
+//
+//goland:noinspection ALL
 type AMF0Object map[string]AMF0Value
 
 func (o AMF0Object) Type() byte { return AMF0TypeObject }
 
 // AMF0Null represents an AMF0 Null
+//
+//goland:noinspection ALL
 type AMF0Null struct{}
 
 func (n AMF0Null) Type() byte { return AMF0TypeNull }
 
 // AMF0Undefined represents an AMF0 Undefined
+//
+//goland:noinspection ALL
 type AMF0Undefined struct{}
 
 func (u AMF0Undefined) Type() byte { return AMF0TypeUndefined }
 
 // AMF0EcmaArray represents an AMF0 ECMA Array
+//
+//goland:noinspection ALL
 type AMF0EcmaArray struct {
 	Count      uint32
 	Properties map[string]AMF0Value
@@ -77,11 +95,15 @@ type AMF0EcmaArray struct {
 func (a AMF0EcmaArray) Type() byte { return AMF0TypeEcmaArray }
 
 // AMF0StrictArray represents an AMF0 Strict Array
+//
+//goland:noinspection ALL
 type AMF0StrictArray []AMF0Value
 
 func (a AMF0StrictArray) Type() byte { return AMF0TypeStrictArray }
 
 // AMF0Date represents an AMF0 Date
+//
+//goland:noinspection ALL
 type AMF0Date struct {
 	Milliseconds float64
 	Timezone     int16
@@ -95,11 +117,15 @@ func (d AMF0Date) Time() time.Time {
 }
 
 // AMF0LongString represents an AMF0 Long String
+//
+//goland:noinspection ALL
 type AMF0LongString string
 
 func (s AMF0LongString) Type() byte { return AMF0TypeLongString }
 
 // AMF0TypedObject represents an AMF0 Typed Object
+//
+//goland:noinspection ALL
 type AMF0TypedObject struct {
 	ClassName  string
 	Properties map[string]AMF0Value
@@ -108,6 +134,8 @@ type AMF0TypedObject struct {
 func (o AMF0TypedObject) Type() byte { return AMF0TypeTypedObject }
 
 // AMF0Encoder encodes Go values to AMF0 format
+//
+//goland:noinspection ALL
 type AMF0Encoder struct {
 	writer io.Writer
 }
@@ -399,6 +427,8 @@ func (e *AMF0Encoder) writeByte(b byte) error {
 }
 
 // AMF0Decoder decodes AMF0 format to Go values
+//
+//goland:noinspection ALL
 type AMF0Decoder struct {
 	reader io.Reader
 }

@@ -119,24 +119,32 @@ func NewClient(config *ClientConfig) *Client {
 }
 
 // Connect establishes a connection to the RTMP server at the specified address.
+//
+//goland:noinspection ALL
 func (c *Client) Connect(ctx context.Context, address string) error {
 	// Implementation will be in internal package
 	return nil
 }
 
 // Publish starts publishing a stream with the specified name.
+//
+//goland:noinspection ALL
 func (c *Client) Publish(ctx context.Context, streamName string, streamType StreamType) error {
 	// Implementation will be in internal package
 	return nil
 }
 
 // Subscribe starts subscribing to a stream with the specified name.
+//
+//goland:noinspection ALL
 func (c *Client) Subscribe(ctx context.Context, streamName string) error {
 	// Implementation will be in internal package
 	return nil
 }
 
 // WriteMessage sends an RTMP message to the server.
+//
+//goland:noinspection ALL
 func (c *Client) WriteMessage(msg *Message) error {
 	// Implementation will be in internal package
 	return nil
