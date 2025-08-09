@@ -5,7 +5,7 @@ A complete implementation of the Real-Time Messaging Protocol (RTMP) in Go, foll
 ## Features
 
 - **Complete RTMP Protocol Support**: Implements all RTMP specifications including chunk streaming, message formats, and command messages
-- **AMF Encoding/Decoding**: Full support for both AMF0 and AMF3 (Action Message Format) data encoding
+- **AMF Encoding/Decoding**: Full support for both AMF0 and AMF3 (Action Message Format) data encoding with automatic format detection
 - **Client and Server APIs**: Easy-to-use client and server implementations
 - **Cross-Platform**: Pure Go implementation that runs on Windows, Linux, macOS, and other supported architectures
 - **Concurrent Connections**: Efficient handling of multiple simultaneous client connections
@@ -28,7 +28,8 @@ rtmp-go/
 │   ├── handshaker.go      # RTMP handshake implementation
 │   └── chunk_streamer.go  # Chunk streaming protocol
 ├── internal/              # Internal implementation
-│   ├── amf/               # AMF encoding/decoding
+│   ├── amf0/              # AMF0 encoding/decoding
+│   ├── amf3/              # AMF3 encoding/decoding
 │   ├── protocol/          # Command message handling
 │   └── connection/        # Connection management
 └── refs/                  # Specification documents
@@ -39,6 +40,24 @@ rtmp-go/
 ```bash
 go get github.com/DMA-Software/dma-gortmp
 ```
+
+## AMF3 Support
+
+This library provides full support for both AMF0 and AMF3 (Action Message Format) encoding. AMF3 is a more compact binary format introduced with Flash Player 9 that offers several advantages:
+
+- **Compact Encoding**: Variable-length integer encoding reduces message size
+- **Reference Tables**: Automatic deduplication of strings, objects, and traits
+- **Type Safety**: More precise type definitions and better object serialization
+- **Modern Client Support**: Required by newer Flash clients and applications
+
+### Automatic Format Detection
+
+The library automatically detects and switches between AMF0 and AMF3 based on the `objectEncoding` property in the RTMP connect command:
+
+- `objectEncoding: 0` - Uses AMF0 format (default, backward compatible)
+- `objectEncoding: 3` - Uses AMF3 format (modern, more efficient)
+
+This detection happens automatically during the connection handshake, so no manual configuration is required. The same connection can seamlessly handle both formats as negotiated by the client.
 
 ## Quick Start
 
@@ -359,7 +378,13 @@ RTMP messages are split into chunks for transmission. The library handles:
 
 Complete AMF (Action Message Format) implementation:
 - **AMF0**: All data types including Number, Boolean, String, Object, Array, Date, etc.
-- **AMF3**: Planned for future release
+- **AMF3**: All data types including Number, Boolean, String, Object, Array, Date, etc.
+- **AMF0/3 Reference Tables**: Automatic deduplication of strings, objects, and traits
+- **AMF0/3 Type Safety**: More precise type definitions and better object serialization
+- **AMF0/3 Modular Encoding**: Flexible encoding format that allows for future extensions
+- **AMF0/3 Modular Decoding**: Flexible decoding format that allows for future extensions
+- **AMF0/3 Type Conversion**: Automatic type conversion between Go types and AMF types
+- **AMF3/3 Type Conversion**: Automatic type conversion between Go types and AMF types
 - Automatic type conversion between Go types and AMF types
 
 ### Command Messages
