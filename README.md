@@ -14,7 +14,7 @@ A complete implementation of the Real-Time Messaging Protocol (RTMP) in Go, foll
 
 ## Architecture
 
-The library follows a modular architecture with clear separation of concerns:
+The library follows a modular architecture with a clear separation of concerns:
 
 ```
 rtmp-go/
@@ -214,8 +214,8 @@ Configuration for RTMP servers.
 - `MaxConnections int` - Maximum concurrent connections
 
 **Callbacks:**
-- `OnConnect func(conn *ServerConnection) error` - Called when client connects
-- `OnDisconnect func(conn *ServerConnection)` - Called when client disconnects
+- `OnConnect func(conn *ServerConnection) error` - Called when a client connects
+- `OnDisconnect func(conn *ServerConnection)` - Called when a client disconnects
 - `OnPublish func(conn *ServerConnection, streamName string, streamType StreamType) error`
 - `OnPlay func(conn *ServerConnection, streamName string) error`
 - `OnMessage func(conn *ServerConnection, msg *Message) error`
