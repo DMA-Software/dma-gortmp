@@ -8,6 +8,7 @@ import (
 	"fmt"
 
 	"github.com/DMA-Software/dma-gortmp/internal/amf0"
+	"github.com/DMA-Software/dma-gortmp/internal/amf3"
 )
 
 // CommandName represents the name of an RTMP command.
@@ -128,20 +129,44 @@ type StatusObject struct {
 }
 
 // CommandParser parses RTMP command messages from AMF data.
-type CommandParser struct{}
-
-// NewCommandParser creates a new command parser.
-func NewCommandParser() *CommandParser {
-	return &CommandParser{}
+type CommandParser struct {
+	encoding uint8 // 0 for AMF0, 3 for AMF3
 }
 
-// ParseCommand parses a command from AMF0 encoded data.
+// NewCommandParser creates a new command parser with default AMF0 encoding.
+func NewCommandParser() *CommandParser {
+	return &CommandParser{encoding: 0}
+}
+
+// SetEncoding sets the AMF encoding version (0 for AMF0, 3 for AMF3)
+func (p *CommandParser) SetEncoding(encoding uint8) {
+	p.encoding = encoding
+}
+
+// SetEncodingFromConnect extracts objectEncoding from ConnectCommand and sets the encoding
+func (p *CommandParser) SetEncodingFromConnect(connectCmd *ConnectCommand) {
+	if connectCmd != nil && connectCmd.ObjectEncoding == 3 {
+		p.encoding = 3 // Use AMF3
+	} else {
+		p.encoding = 0 // Use AMF0 (default)
+	}
+}
+
+// ParseCommand parses a command from AMF encoded data (AMF0 or AMF3 based on encoding setting).
 func (p *CommandParser) ParseCommand(data []byte) (*Command, error) {
 	if len(data) == 0 {
 		return nil, fmt.Errorf("empty command data")
 	}
 
-	decoder := amf0.NewAMF0Decoder(bytes.NewReader(data))
+	var decoder interface {
+		Decode() (interface{}, error)
+	}
+
+	if p.encoding == 3 {
+		decoder = amf3.NewAMF3Decoder(bytes.NewReader(data))
+	} else {
+		decoder = amf0.NewAMF0Decoder(bytes.NewReader(data))
+	}
 
 	// First element: command name (string)
 	nameValue, err := decoder.Decode()
@@ -357,17 +382,41 @@ func (p *CommandParser) ParsePlayCommand(args []interface{}) (*PlayCommand, erro
 }
 
 // CommandBuilder builds RTMP command messages.
-type CommandBuilder struct{}
-
-// NewCommandBuilder creates a new command builder.
-func NewCommandBuilder() *CommandBuilder {
-	return &CommandBuilder{}
+type CommandBuilder struct {
+	encoding uint8 // 0 for AMF0, 3 for AMF3
 }
 
-// BuildCommand builds a command message as AMF0 encoded data.
+func NewCommandBuilder() *CommandBuilder {
+	return &CommandBuilder{encoding: 0}
+}
+
+// SetEncoding sets the AMF encoding version for command building (0 for AMF0, 3 for AMF3)
+func (b *CommandBuilder) SetEncoding(encoding uint8) {
+	b.encoding = encoding
+}
+
+// SetEncodingFromConnect extracts objectEncoding from ConnectCommand and sets the encoding for building
+func (b *CommandBuilder) SetEncodingFromConnect(connectCmd *ConnectCommand) {
+	if connectCmd != nil && connectCmd.ObjectEncoding == 3 {
+		b.encoding = 3 // Use AMF3
+	} else {
+		b.encoding = 0 // Use AMF0 (default)
+	}
+}
+
+// BuildCommand builds a command message as AMF encoded data (AMF0 or AMF3 based on encoding setting).
 func (b *CommandBuilder) BuildCommand(name CommandName, transactionID float64, commandObj interface{}, args ...interface{}) ([]byte, error) {
 	var buf bytes.Buffer
-	encoder := amf0.NewAMF0Encoder(&buf)
+
+	var encoder interface {
+		Encode(value interface{}) error
+	}
+
+	if b.encoding == 3 {
+		encoder = amf3.NewAMF3Encoder(&buf)
+	} else {
+		encoder = amf0.NewAMF0Encoder(&buf)
+	}
 
 	// Encode command name
 	if err := encoder.Encode(string(name)); err != nil {
