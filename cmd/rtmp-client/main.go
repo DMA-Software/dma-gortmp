@@ -1,6 +1,10 @@
 // Package main provides a simple RTMP client example.
 // This demonstrates how to use the dma-gortmp library to connect to an RTMP server,
 // authenticate, create a stream, and publish content.
+//
+// The library automatically supports both AMF0 and AMF3 encoding based on server negotiation.
+// AMF3 encoding will be used automatically if the server supports it and requests it via
+// the objectEncoding property in the connect command.
 package main
 
 import (
@@ -175,3 +179,6 @@ func runClient(ctx context.Context, client *rtmp.Client, config *Config) error {
 //
 // Custom timeouts:
 // go run main.go -url rtmp://localhost:1935/live -stream mystream -conn-timeout 60s -read-timeout 45s -write-timeout 45s
+//
+// AMF3 encoding will be used automatically if supported by the server. The client will negotiate
+// the appropriate encoding format during the RTMP handshake based on the server's capabilities.
