@@ -228,7 +228,7 @@ func (e *AMF3Encoder) encodeValue(value interface{}) error {
 	case AMF3Value:
 		return e.encodeAMF3Value(v)
 	default:
-		return e.encodeObject(v)
+		return fmt.Errorf("unsupported value type: %T", value)
 	}
 }
 
